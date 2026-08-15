@@ -5,12 +5,12 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Allow cross-origin requests from your Chrome extension
+// Allow cross-origin requests from your Chrome extension and the site
 app.use(cors({
     origin: ['chrome-extension://*', 'https://playvortex.io']
 }));
 
-// --- PARSER FUNCTIONS (Exact same as your content.js) ---
+// --- PARSER FUNCTIONS ---
 
 function parseTypewriter(text) {
     const regex = /\[typewrite\]\(([^)]*)\)\{(\d+)\}/g;
@@ -54,13 +54,12 @@ function processBio(bioText) {
     
     let processed = bioText;
 
-    // ⚠️ IMPORTANT: Put a real, public URL to your hacker.gif here!
-    // You can upload it to Imgur, Discord CDN, or your own server.
-    const HACKER_GIF_PUBLIC_URL = "https://i.imgur.com/YOUR_HACKER_GIF_ID.gif"; // <--- CHANGE THIS
+    // 🔥 YOUR DIRECT TENOR GIF URL
+    const HACKER_GIF_URL = "https://media.tenor.com/xT2K_qHzB2AAAAAC/hacker-pc-meme.gif";
 
     if (processed.includes(':hackergif:')) {
         processed = processed.replace(/:hackergif:/g, 
-            `<div class="hacker-gif-container" style="display:inline-block; border:4px solid #000; border-radius:8px; overflow:hidden; background:#000; box-shadow:0 4px 10px rgba(0,0,0,0.3); width:auto; height:auto;"><img src="${HACKER_GIF_PUBLIC_URL}" style="display:block; width:auto; height:auto; max-height:200px; max-width:300px; object-fit:contain;"></div>`
+            `<div class="hacker-gif-container" style="display:inline-block; border:4px solid #000; border-radius:8px; overflow:hidden; background:#000; box-shadow:0 4px 10px rgba(0,0,0,0.3); width:auto; height:auto;"><img src="${HACKER_GIF_URL}" style="display:block; width:auto; height:auto; max-height:200px; max-width:300px; object-fit:contain;"></div>`
         );
     }
 
@@ -91,7 +90,6 @@ app.get('/api/users/:id', async (req, res) => {
         res.json(userData);
     } catch (error) {
         console.error("Error proxying request:", error.message);
-        // If PlayVortex fails, return a 500 error
         res.status(500).json({ error: "Failed to fetch profile data from PlayVortex" });
     }
 });
