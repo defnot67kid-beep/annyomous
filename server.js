@@ -5,7 +5,7 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Allow cross-origin requests from your Chrome extension and the site
+// Allow cross-origin requests
 app.use(cors({
     origin: ['chrome-extension://*', 'https://playvortex.io']
 }));
@@ -63,7 +63,6 @@ function processBio(bioText) {
         );
     }
 
-    // Parse markdown
     if (processed.includes('[typewrite]') || processed.includes('****') || processed.includes('*') || processed.includes('_')) {
         processed = parseMarkdown(processed);
     }
@@ -71,22 +70,30 @@ function processBio(bioText) {
     return processed;
 }
 
-// --- MAIN PROXY ROUTE ---
+// --- ROOT ROUTE (Fixes the "Cannot GET /" error) ---
+app.get('/', (req, res) => {
+    res.send(`
+        <h1>PlayVortex Bio Proxy is Running!</h1>
+        <p>This server is actively intercepting and formatting bios.</p>
+        <p>To use it, your Chrome extension should fetch from: <code>https://annyomous.onrender.com/api/users/&lt;USER_ID&gt;</code></p>
+        <hr>
+        <h3>Test it manually:</h3>
+        <p><a href="/api/users/29286">View processed bio for User 29286</a></p>
+    `);
+});
 
+// --- MAIN PROXY ROUTE ---
 app.get('/api/users/:id', async (req, res) => {
     const userId = req.params.id;
     
     try {
-        // Fetch data from PlayVortex
         const response = await axios.get(`https://playvortex.io/api/users/${userId}`);
         const userData = response.data;
 
-        // Inject the formatted bio
         if (userData.bio) {
             userData.bio = processBio(userData.bio);
         }
 
-        // Send back the modified data
         res.json(userData);
     } catch (error) {
         console.error("Error proxying request:", error.message);
