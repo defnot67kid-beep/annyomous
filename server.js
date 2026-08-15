@@ -3,14 +3,15 @@ const axios = require('axios');
 const cors = require('cors');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// Allow your Chrome extension to access this API
+// Allow cross-origin requests from your Chrome extension
 app.use(cors({
-    origin: ['chrome-extension://*', 'http://localhost:3000']
+    origin: ['chrome-extension://*', 'https://playvortex.io']
 }));
 
-// Helper: Parser functions (same as your content.js)
+// --- PARSER FUNCTIONS (Exact same as your content.js) ---
+
 function parseTypewriter(text) {
     const regex = /\[typewrite\]\(([^)]*)\)\{(\d+)\}/g;
     let match;
@@ -46,23 +47,24 @@ function parseMarkdown(text) {
     return parsed;
 }
 
-// FUNCTION TO PROCESS BIO
+// --- GIF REPLACEMENT FUNCTION ---
+
 function processBio(bioText) {
     if (!bioText) return bioText;
     
     let processed = bioText;
-    
-    // 1. Replace :hackergif: with direct HTML <img>
-    // Since this is server-side, we can't use chrome.runtime.getURL, so we use a CDN or direct URL
-    // NOTE: You will need to host your hacker.gif on a public URL (e.g., Imgur or your own server)
-    const HACKER_GIF_PUBLIC_URL = "https://i.imgur.com/YOUR_HACKER_GIF_ID.gif"; // <--- REPLACE THIS
+
+    // ⚠️ IMPORTANT: Put a real, public URL to your hacker.gif here!
+    // You can upload it to Imgur, Discord CDN, or your own server.
+    const HACKER_GIF_PUBLIC_URL = "https://i.imgur.com/YOUR_HACKER_GIF_ID.gif"; // <--- CHANGE THIS
+
     if (processed.includes(':hackergif:')) {
         processed = processed.replace(/:hackergif:/g, 
-            `<div class="hacker-gif-container"><img src="${HACKER_GIF_PUBLIC_URL}" class="hacker-gif" alt="hacker"></div>`
+            `<div class="hacker-gif-container" style="display:inline-block; border:4px solid #000; border-radius:8px; overflow:hidden; background:#000; box-shadow:0 4px 10px rgba(0,0,0,0.3); width:auto; height:auto;"><img src="${HACKER_GIF_PUBLIC_URL}" style="display:block; width:auto; height:auto; max-height:200px; max-width:300px; object-fit:contain;"></div>`
         );
     }
 
-    // 2. Parse markdown (typewriter, bold, italic)
+    // Parse markdown
     if (processed.includes('[typewrite]') || processed.includes('****') || processed.includes('*') || processed.includes('_')) {
         processed = parseMarkdown(processed);
     }
@@ -70,30 +72,31 @@ function processBio(bioText) {
     return processed;
 }
 
-// PROXY ROUTE: /api/users/:id
+// --- MAIN PROXY ROUTE ---
+
 app.get('/api/users/:id', async (req, res) => {
     const userId = req.params.id;
     
     try {
-        // 1. Fetch the real data from PlayVortex
+        // Fetch data from PlayVortex
         const response = await axios.get(`https://playvortex.io/api/users/${userId}`);
         const userData = response.data;
 
-        // 2. Modify the bio
+        // Inject the formatted bio
         if (userData.bio) {
             userData.bio = processBio(userData.bio);
         }
 
-        // 3. Send back the modified data
+        // Send back the modified data
         res.json(userData);
     } catch (error) {
         console.error("Error proxying request:", error.message);
+        // If PlayVortex fails, return a 500 error
         res.status(500).json({ error: "Failed to fetch profile data from PlayVortex" });
     }
 });
 
 // Start the server
 app.listen(PORT, () => {
-    console.log(`🚀 Bio Render Proxy running on http://localhost:${PORT}`);
-    console.log(`📡 Intercepting /api/users/:id`);
+    console.log(`🚀 Bio Render Proxy running on port ${PORT}`);
 });
